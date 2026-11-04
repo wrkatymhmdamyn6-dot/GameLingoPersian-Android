@@ -30,6 +30,10 @@ class FloatingService : Service() {
     private val purple = Color.rgb(151, 91, 255)
     private val dark = Color.rgb(24, 20, 38)
 
+    private val projectionCallback = object : MediaProjection.Callback() {
+        override fun onStop() { projection = null }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -48,6 +52,7 @@ class FloatingService : Service() {
         if (projection == null && data != null && code == Activity.RESULT_OK) {
             val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             projection = mgr.getMediaProjection(code, data)
+            projection?.registerCallback(projectionCallback, Handler(mainLooper))
         }
         if (bubble == null) showBubble()
         return START_NOT_STICKY
@@ -154,6 +159,7 @@ class FloatingService : Service() {
     override fun onDestroy() {
         try { panel?.let { wm.removeView(it) } } catch (_:Exception) {}
         try { bubble?.let { wm.removeView(it) } } catch (_:Exception) {}
-        projection?.stop(); super.onDestroy()
+        try { projection?.unregisterCallback(projectionCallback); projection?.stop() } catch (_:Exception) {}
+        super.onDestroy()
     }
 }
